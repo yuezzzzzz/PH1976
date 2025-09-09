@@ -1,0 +1,251 @@
+---
+title: "Assignment1"
+author: "Yue Zhang"
+date: "`r Sys.Date()`"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+#This code chunk will tidy your knit PDF files, wrapping long code lines
+#For it to work, the "formatR" package needs to be installed
+#install.packages('formatR')
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy=TRUE)
+
+```
+
+```{r library, results= 'hide'}
+setwd("/Users/yuezhang/Documents/Biostat/PH1976")
+getwd()
+library(ISLR2)
+library(ggplot2)
+library(tidyr)
+library(dtplyr)
+library(tidyverse)
+library(ggcorrplot)
+```
+
+*1*. 
+
+**(a)**. Flexible methods will be better. With extremely large dataset and very few predictors, we have enough data to estimate the relationship without overfitting.  
+**(b)**. Flexible methods will perform worse. Flexible models will overfit and have high variance.  
+**(c)**. Flexible methods will perform better. Because the relationship tends to be non-linear and inflexible models may miss the true complexity and have high bias.  
+
+*2*.  
+**(a)**. n = 500, p = 3 This is a regression problem and we're interested in inference.  
+**(b)**. n = 20, p = 13 This is a classification problem and we're interested in prediction.  
+**(c)**. n = 52, p = 3 This is a regression problem and we're interested in prediction.  
+
+*5*. 
+
+A flexible model can fit complex relationships between predictors and response. It can capture non linear relationship and has low bias. However, it will suffer from high variance and when noise is high or sample size is small, it tends to overfit. Flexible models are less interpretable. A less flexible model is easier to use and interpret and has lower variance. It won't capture a lot noise. But it may have higher bias if the relationship is complicated. A flexible approach is preferred when the relationship is highly non-linear or complex with large sample size. A less flexible approach is preferred when the sample size is small relative to the number of predictors.  
+
+*7*. 
+
+```{r question 7, message = FALSE, warning = FALSE}
+X1 = c(0, 2, 0, 0, -1, 1)
+X2 = c(3, 0, 1, 1, 0, 1)
+X3 = c(0, 0, 3, 2, 1, 1)
+Y = c("red", "red", "red", "green", "green", "red")
+df1 = cbind.data.frame(X1, X2, X3, Y)
+```
+
+**(a)**.  
+
+```{r question 7 a, message = FALSE, warning = FALSE}
+df1$distance = sqrt((df1$X1 - 0)^2 + (df1$X2 - 0)^2 + (df1$X3 - 0)^2)
+print(round(df1$distance, 3))
+#Ordered distance from small to large: 5, 6, 2, 4, 1, 3
+```
+
+**(b)**.  
+
+```{r question 7 b, message = FALSE, warning = FALSE}
+knn = function(k) {
+  names(which.max(table(df1[["Y"]][order(df1$distance)[1:k]])))
+}
+knn(1)
+#For k = 1, it's only based on point 5.
+```
+
+**(c)**.  
+
+```{r question 7 c, message = FALSE, warning = FALSE}
+knn(3)
+#For k = 3, it's based on point 2, 5, 6
+```
+
+**(d)**. We would expect the best value of k to be small as it yields to low bias and higher variance, which is better to capture complex structure while large k oversmooths and increases bias.
+
+
+
+*8*. 
+
+**(a)**.  
+
+```{r question 8 a, message = FALSE, warning = FALSE}
+college = read.csv("../Data/College.csv")
+```
+
+**(b)**.  
+
+```{r question 8 b, message = FALSE, warning = FALSE}
+rownames(college) = college[, 1]
+View(college)
+
+college = college[, -1]
+View(college)
+```
+
+**(c)**. 
+***(i)***. 
+
+```{r question 8 c1, message = FALSE, warning = FALSE}
+summary(college)
+```
+
+***(ii)***. 
+
+```{r question 8 c2, message = FALSE, warning = FALSE}
+college$Private = college$Private == "Yes"
+pairs(college[, 1:10], pch = 19, cex = 0.2)
+```
+
+***(iii)***. 
+
+```{r question 8 c3, message = FALSE, warning = FALSE}
+plot(college$Outstate ~ factor(college$Private), xlab = "Private", ylab = "Outstate")
+```
+
+***(iv)***. 
+
+```{r question 8 c4, message = FALSE, warning = FALSE}
+Elite = rep("No", nrow(college))
+Elite[college$Top10perc > 50] = "Yes"
+Elite = as.factor(Elite)
+college = data.frame(college , Elite)
+
+summary(college$Elite)
+
+plot(college$Outstate ~ factor(college$Elite), xlab = "Elite", ylab = "Outstate")
+```
+
+***(v)***. 
+
+```{r question 8 c5, message = FALSE, warning = FALSE}
+par(mfrow = c(2, 2))
+hist(college$Enroll, breaks = 10, main = "Enroll", xlab = "Enroll")
+hist(college$Accept, breaks = 20, main = "Accepted", xlab = "Accept")
+hist(college$Grad.Rate, breaks = 30, main = "Graduate Rate", xlab = "Grad.Rate")
+hist(college$PhD, breaks = 50, main = "PhD", xlab = "PhD")
+par(mfrow = c(1, 1))
+```
+
+***(vi)***. 
+```{r question 8 c6, message = FALSE, warning = FALSE}
+cont_vars = college %>%
+  select(Grad.Rate, Accept, Enroll, Top10perc, Top25perc, PhD, Outstate)
+
+cor_mat = cor(cont_vars, use = "pairwise.complete.obs")
+ggcorrplot(
+  cor_mat,
+  method = "square",
+  type = "lower",           
+  hc.order = TRUE,          
+  lab = TRUE,               
+  lab_size = 3,
+  colors = c("#2166ac", "white", "#b2182b"), 
+  hc.method = "complete",
+  tl.srt = 45,              
+  show.diag = NULL         
+) +
+  ggplot2::labs(title = "Covariate Correlations") +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  ) + 
+  guides(fill = guide_colorbar(barheight = unit(8, "cm")))
+```
+From the correlation matrix, we can see that the number of students accepted and the number of students enrolled are highly correlated. The proportion of students from the top 10% high schools is strongly correlated with the proportion from the top 25% high schools. Both enrollment and acceptance to the university are negatively correlated with outstate which makes sense as out of state tuition is higher than in-state tuition. 
+
+*10*. 
+
+**(a)**. 
+
+```{r question 10a, message = FALSE, warning = FALSE}
+?Boston
+View(Boston)
+str(Boston)
+```
+There are 506 rows and 13 columns in this dataset. Each row represents a suburb in Boston. Each column describes the characteristics of the suburb (crime rate, proportion of residential land, proportion of non-retail business, Charles River, nitrogen oxide concentration, average number of rooms per dwelling, proportion of owner-occupied units, weighted mean of distances to five employment centers, accessibility to radial highways, full-value property tax rate, pupil-teacher ratio, lower status of the population, and median value of owner-occupied homes)
+
+***(b)***. 
+
+```{r question 10b, message = FALSE, warning = FALSE}
+pairs(Boston[, c(1, 5, 8, 9)], pch = 19, cex = 0.3)
+```
+The pairwise scatterplot shows that higher crime rates tend to happen in areas that are close to employment centers and close to highways. Areas closer to employment centers also suffer from high nitrogen oxide concentration. 
+
+***(c)***.  
+
+```{r question 10c, message = FALSE, warning = FALSE}
+par(mfrow = c(3, 4)) 
+
+for (var in names(Boston)[-1]) {  
+  plot(Boston[[var]], Boston$crim,
+       xlab = var, ylab = "Per capita crime rate",
+       main = paste("crim vs", var), pch = 19, cex = 0.4)
+}
+par(mfrow = c(1, 1))
+```
+Crime rate is higher in areas with more industrial land use, server air pollution, closer to employment centers, smaller homes, lower median housing values, closer to highway, lower property tax, older housing and larger proportion of lower-status population.
+
+***(d)***. 
+
+```{r question 10d, message = FALSE, warning = FALSE}
+range(Boston$crim)      
+range(Boston$tax)   
+range(Boston$ptratio)
+
+
+which.max(Boston$crim)
+which.max(Boston$tax)
+which.max(Boston$ptratio)
+
+
+summary(Boston[, c("crim", "tax", "ptratio")])
+```
+The range of crime rate is [0.00632, 88.97620], census tract 381 has the highest crime rate. The range of property tax rate is [187, 711], census tract 489 has the highest property tax rate. The range of pupil-teacher ratio is [12.6, 22.0], census tract 355 has the highest pupil-teacher ratio. 
+
+***(e)***. 
+
+```{r question 10e, message = FALSE, warning = FALSE}
+sum(Boston$chas == 1)
+```
+There are 35 census tracts set bound the Charles river.
+
+***(f)***. 
+
+```{r question 10f, message = FALSE, warning = FALSE}
+median(Boston$ptratio)
+```
+The median pupil-teacher ratio is 19.05
+
+***(g)***. 
+
+```{r question 10g, message = FALSE, warning = FALSE}
+which.min(Boston$medv)
+Boston[which.min(Boston$medv), ]
+summary(Boston)
+```
+Census tract 399 has the lowest median value of owner-occupied homes. Compared to the overall ranges for predictors, we can see that this census tract has high crime, high pollution, high proportion of lower-status population, old housing, and high taxes, along with small dwellings. 
+
+***(h)***. 
+```{r question 10h, message = FALSE, warning = FALSE}
+sum(Boston$rm > 7)
+sum(Boston$rm > 8)
+Boston[Boston$rm > 8, ]
+```
+There are 64 tracts that have more than 7 rooms per dwelling and 13 tracts that have more than 8 rooms per dwelling. Those 13 tracts tend to associate with high median housing values, low crime rate, lower status of the population, reflecting the most affluent neighborhoods in the dataset.
