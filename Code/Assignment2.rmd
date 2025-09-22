@@ -1,0 +1,213 @@
+---
+title: "Assignment 2"
+author: "Yue Zhang"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+#This code chunk will tidy your knit PDF files, wrapping long code lines
+#For it to work, the "formatR" package needs to be installed
+#install.packages('formatR')
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy=TRUE)
+
+```
+
+```{r library, results= 'hide'}
+setwd("/Users/yuezhang/Documents/Biostat/PH1976")
+getwd()
+library(ISLR2)
+library(ggplot2)
+library(tidyr)
+library(dtplyr)
+library(tidyverse)
+library(stats)
+library(broom)
+```
+
+*1*.
+
+**Answer**.\
+Intercept: Null hypothesis: when spending \$0 on TV, radio, and newspaper advertising, the expected number of units sold is 0. As the p value is less than 0.0001, we have enough evidence to reject the null hypothesis. Even without advertising, there is a non-zero baseline level of sales.
+
+TV: Null hypothesis: changing TV advertising while holding radio and newspaper fixed does not change expected sales. As the p value is less than 0.0001, we have enough evidence to reject the null. TV advertising is positively associated with the number of sales.
+
+Radio： Null hypothesis: changing radio advertising while holding TV and newspaper fixed does not change expected sales. As the p value is less than 0.0001, we have enough evidence to reject the null hypothesis. Radio advertising is positively associated with the number of sales.
+
+Newspaper: Null hypothesis: changing newspaper advertising while holding TV and radio fixed does not change expected sales. As the p value is 0.8599 which is higher than 0.05, we fail to reject the null hypothesis. Newspaper advertising does not have a strong relationship with the expected number of sales.
+
+*10*.
+
+**(a)**\. 
+
+```{r 10a, message = FALSE, warning = FALSE}
+carseats_model1 = lm(data = Carseats, Sales ~ Price + Urban + US)
+```
+
+**(b)**\. 
+
+```{r 10b, message = FALSE, warning = FALSE}
+summary(carseats_model1)
+```
+
+Intercept: if price = 0, and the store is located in an rural location outside the US, the expected sales will be 13.04 units. Price: while holding urban and US constant, for each \$1 increase in price, the expected sales decreased by 0.054 units. The p-value is less than 0.05, indicating that price and sales have a strong negative correlation. UrbanYes: while holding US and price constant, stores located in urban areas sell 0.022 fewer units than stores located in rural areas. The p-value is 0.936 which is larger than 0.05, we don't have enough evidence to say that urban is a significant factor. US: while holding price and urban constant, stores located in the US sell 1.201 more units than stores located outside the US. The p-value is less than 0.05, thus whether or not located in the US and sales have a strong positive relationship.
+
+**(c)**\. 
+
+Sales = −0.054⋅Price − 0.022⋅UrbanYes + 1.201⋅USYes + 13.043. UrbanYes = 1 if Urban = "Yes", UrbanYes = 0 if Urban = "No". USYes = 1 if US = "Yes", USYes = 0 if US = "No".
+
+**(d)**\. 
+
+Based on the p-values, we have enough evidence to reject the null hypothesis for price and US as their p-values are less than 0.05.
+
+**(e)**\. 
+
+```{r 10e, message = FALSE, warning = FALSE}
+carseats_model2 = lm(data = Carseats, Sales ~ Price + US)
+```
+
+**(f)**\. 
+
+```{r 10f, message = FALSE, warning = FALSE}
+summary(carseats_model2)
+anova(carseats_model1, carseats_model2)
+```
+
+For the first model, the R squared is 0.2393. For the second model, the R squared is also 0.2393. The ANOVA test shows that the p-value is 0.9357, indicating the model doesn't improve when adding Urban. Therefore, the second model fits as well as the first model.
+
+**(g)**
+
+```{r 10g, message = FALSE, warning = FALSE}
+confint(carseats_model2, level = 0.95)
+```
+
+95% CI for intercept: [11.790, 14.271]\
+95% CI for price: [-0.065, -0.044]\
+95% CI for USYes: [0.692, 1.708]
+
+**(h)**\. 
+
+```{r 10h, message = FALSE, warning = FALSE}
+par(mfrow = c(2, 2))
+plot(carseats_model2)
+```
+
+From the residuals vs. fitted plot, we can see that observation 69, 377 and 51 have larger residuals. The residuals vs. leverage plot shows that observation 26, 50 and 368 have the largest Cook's distance but the values are still small. Therefore, we don't have strong evidence of outliers or high leverage observations after checking the plots. We still need more precise tests like DFITTS or DFBETA to examine further.
+
+*12*.
+
+**(a)**\. 
+$\hat{\beta_1} = \frac{\sum_{i=1}^n x_i y_i}{\sum_{i=1}^n x_i^2}$
+$\hat{\beta_2} = \frac{\sum_{i=1}^n x_i y_i}{\sum_{i=1}^n x_i^2}$
+Therefore, if we want the two coefficients be the same: ${\sum_{i=1}^n y_i^2} = {\sum_{i=1}^n x_i^2}$
+
+**(b)**\. 
+
+```{r 12b, message = FALSE, warning = FALSE}
+set.seed(10)
+n  = 100
+x  = rnorm(n)
+y  = 2*x + rnorm(n, 0, 0.1)
+
+yx = coef(lm(y ~ x + 0))  
+xy = coef(lm(x ~ y + 0))
+
+print(yx)
+print(xy)
+```
+
+**(c)**\. 
+
+```{r 12c, message = FALSE, warning = FALSE}
+set.seed(10)
+n  = 100
+x2  = rnorm(n)
+y2  = x2
+
+yx2 = coef(lm(y2 ~ x2 + 0))  
+xy2 = coef(lm(x2 ~ y2 + 0))
+
+print(yx2)
+print(xy2)
+```
+
+*15*\. 
+
+**(a)**\. 
+
+```{r 15a, message = FALSE, warning = FALSE}
+str(Boston)
+pred = subset(ISLR2::Boston, select = -crim)
+boston_model = lapply(pred, function(x) lm(ISLR2::Boston$crim ~ x))
+table = do.call(rbind, lapply(boston_model, function(p) coef(summary(p))[2, ]))
+colnames(table) = c("Estimate", "Std. Error", "t-value", "p-value")
+printCoefmat(table, P.value = TRUE, has.Pvalue = TRUE)
+
+par(mfrow = c(3, 3))
+for (var in names(ISLR2::Boston)[-which(names(ISLR2::Boston) == "crim")]) {
+  fit = lm(crim ~ ISLR2::Boston[[var]], data = ISLR2::Boston)
+  plot(ISLR2::Boston[[var]], ISLR2::Boston$crim,
+       xlab = var, ylab = "crim",
+       main = paste("crim vs", var),
+       pch = 20, col = "blue")
+  abline(fit, col = "red", lwd = 2)
+}
+```
+Except chas, all other models show a statistically significant association between the predictor and the response as the p-values are less than 0.05. Also we could barely see a trend in the plot of crim vs. chas.
+
+**(b)**\. 
+
+```{r 15b, message = FALSE, warning = FALSE}
+boston_model2 = lm(data = ISLR2::Boston, crim ~ .)
+summary(boston_model2)
+```
+Based on the summary, zn, dis, rad and medv are statistically significant as their p-values are less than 0.05. Therefore, we can reject null hypothesis for these predictors. The R squared of this model is 0.4493, indicating that 44.93% of the variation in crime rate by town can be explained by the predictors. The F-value is 33.52 with a p-value less than 0.05, suggesting the overall model is significant.
+
+**(c)**
+
+```{r 15c, message = FALSE, message = FALSE}
+pred_order = names(coef(boston_model2))[-1] 
+
+uni_slopes = sapply(pred_order, function(v) {
+  coef(lm(crim ~ ISLR2::Boston[[v]], data = ISLR2::Boston))[2]
+})
+
+multi_slopes = coef(boston_model2)[pred_order]
+
+
+length(uni_slopes); length(multi_slopes)
+
+par(mfrow = c(1, 1))
+plot(uni_slopes, multi_slopes,
+     xlab = "Univariate Regression Coefficient",
+     ylab = "Multiple Regression Coefficient",
+     pch = 20)
+abline(0, 1, lty = 2, col = "red")
+text(uni_slopes, multi_slopes,
+     labels = names(multi_slopes),
+     pos = 3,      
+     cex = 0.8,   
+     col = "blue") 
+```
+Most predictors that appear significant in simple regressions lose their effect in the multiple regression. Specially nox has a positive relationship with crime rate when doing a simple linear regression but appears to be negatively correlated with crime rate after adding all other predictors in the multiple linear regression.
+
+**(d)**\. 
+```{r 15d, message = FALSE, warning = FALSE}
+#To apply quadratic forms, degree must be less than number of unique points, so we will remove chas
+preds = subset(pred, select = -chas)
+boston_model3 = lapply(names(preds), function(p){
+  f = paste0("crim ~ poly(", p,", 3)")
+  lm(as.formula(f), data = ISLR2::Boston)
+})
+
+for(model in boston_model3)
+  printCoefmat(coef(summary(model))
+  )
+```
+Based on the output, there is strong evidence for many variables having non-linear relationships. The cubic term is significant for predictors such as indus, nox, age, dis, ptratio, medv. For zn, rm, rad, lstat, tax, even though the cubic term is not significant, the squared terms have a p-value less than 0.05. 
+
+
