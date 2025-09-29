@@ -1,0 +1,281 @@
+---
+title: "Assignment3"
+author: "Yue Zhang"
+date: "`r Sys.Date()`"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+#This code chunk will tidy your knit PDF files, wrapping long code lines
+#For it to work, the "formatR" package needs to be installed
+#install.packages('formatR')
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy=TRUE)
+
+```
+
+```{r library, results= 'hide'}
+setwd("/Users/yuezhang/Documents/Biostat/PH1976")
+getwd()
+library(ISLR2)
+library(ggplot2)
+library(tidyr)
+library(dtplyr)
+library(tidyverse)
+library(ggcorrplot)
+library(MASS)
+library(class)
+library(e1071)
+```
+
+*5*\. 
+
+**(a)**\. 
+For the training set, QDA will perform better as it is a more flexible model. However, for the test set, LDA will perform better. Because the Bayes boundary is linear, LDA has lower variance, QDA might encounter overfitting\. 
+
+**(b)**\. 
+For the training set, QDA will perform better as it has smaller training error. If the test set has large n, QDA will perform better as its lower bias will outweights the higher variance. If the test set has small n, LDA might be better due to QDA's overfitting\. 
+
+**(c)**\. 
+As n increases, we would expect the prediction accuracy of QDA relative to LDA to improve as there is more data to fit to subtle effects in the data as QDA's variance shrinks faster than its bias\. 
+
+**(d)**\. 
+False. Even though QDA is a more flexible mode, the flexibility lowers training error, not test error. For a linear Bayes boundary, LDA has lower variance and the correct pattern. QDA might lead to overfitting\. 
+
+*8*\. 
+
+We would prefer the logistic regression for its lower test error. The 1-nearest neighbors classification error on the training set is 0% as each point is its own nearest neighbor. Therefore, the test error should be 18% x 2 = 36% which is larger than 30%\. 
+
+*13*\. 
+
+**(a)**\. 
+
+```{r 13a, message = FALSE, warning = FALSE}
+attach(Weekly)
+summary(Weekly)
+
+#Plot
+ggplot(Weekly, aes(x = Year, y = Volume)) +
+  geom_line() +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(title = "Volume over time")
+
+ggplot(Weekly, aes(x = Year, y = Today)) +
+  geom_line() +
+  geom_smooth(se = FALSE, method = "loess") +
+  labs(title = "Percentage return over time")
+
+ggplot(Weekly, aes(x = Direction, y = Today)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Weekly Return by Direction")
+
+cont_vars = Weekly[, -9]
+cor_mat = cor(cont_vars, use = "pairwise.complete.obs")
+ggcorrplot(
+  cor_mat,
+  method = "square",
+  type = "lower",           
+  hc.order = TRUE,          
+  lab = TRUE,               
+  lab_size = 3,
+  colors = c("#2166ac", "white", "#b2182b"), 
+  hc.method = "complete",
+  tl.srt = 45,              
+  show.diag = NULL         
+) +
+  ggplot2::labs(title = "Covariate Correlations") +
+  ggplot2::theme_minimal(base_size = 12) +
+  ggplot2::theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  ) + 
+  guides(fill = guide_colorbar(barheight = unit(8, "cm")))
+```
+The correlation matrix shows that volumn and year is highly positive correlated, other variables have relatively low correlation. Percentage return for weeks fluctuate around zero, the trend is quite stable except for 2008 which suffered from financial crisis.When direction is up, the median return is positive, when direction is down, the median return is negative. There are some outliers in both directions. The volume over time shows a upward trend which also reflects the correlation matrix\. 
+
+**(b)**\. 
+
+```{r 13b, message = FALSE, warning = FALSE}
+weekly_logistic = glm(
+  data = ISLR2::Weekly,
+  Direction ~ Volume + Lag1 + Lag2 + Lag3 + Lag4 + Lag5,
+  family = binomial
+)
+summary(weekly_logistic)
+```
+Based on the summary, only Lag2 appears to be statistically significant with a p-value less than 0.05\. 
+
+**(c)**\. 
+
+```{r 13c, message = FALSE, warning = FALSE}
+contrasts(Weekly$Direction)
+
+prob = predict(weekly_logistic, type = "response")
+pred_class = factor(ifelse(prob > 0.5, "Up", "Down"),
+                     levels = levels(Weekly$Direction))
+
+confusion_matrix = table(pred_class, Weekly$Direction)
+print(confusion_matrix)
+
+accuracy_logistic = mean(pred_class == Weekly$Direction)
+cat("Accuracy:", round(accuracy_logistic, 4), "\n")
+
+sensitivity = 557/(557 + 48)
+specificity = 54/(54 + 430)
+cat("Sensitivity:", round(sensitivity, 4))
+cat("Specificity:", round(specificity, 4))
+```
+The overall fraction of correct predictions is 56.11%, the sensitivity is 92.07%, and the specificity is 11.16%. This demonstrates that this regression can predict the direction of up well but mis-predicts the direction of down\. 
+
+**(d)**\. 
+
+```{r 13d, message = FALSE, warning = FALSE}
+training = Weekly %>% filter(Year <= 2008)
+test = Weekly %>% filter(Year > 2008)
+
+weekly_logistic2 = glm(data = training, Direction ~ Lag2, family = "binomial")
+weekly_predict = predict(newdata = test, weekly_logistic2, type = "response")
+
+pred2 = ifelse(weekly_predict > 0.5, "Up", "Down")
+
+confusion_matrix2 = table(pred2, test$Direction)
+print(confusion_matrix2)
+
+accuracy_logistic2 = mean(pred2 == test$Direction)
+cat("Accuracy:", round(accuracy_logistic2, 4), "\n")
+
+sensitivity2 = 56/(56 + 5)
+specificity2 = 9/(9 + 34)
+cat("Sensitivity:", round(sensitivity2, 4))
+cat("Specificity:", round(specificity2, 4))
+```
+The overall fraction of correct predictions is 62.5%, the sensitivity is 91.8%, and the specificity is 20.93%. This demonstrates that this regression can predict the direction of up well but mis-predicts the direction of down\. The accuracy is better than the previous model, but still it has many false positives\. 
+
+**(e)**\. 
+
+```{r 13e, message = FALSE, warning = FALSE}
+weekly_lda = lda(data = training, Direction ~ Lag2)
+weekly_predict_lda = predict(newdata = test, weekly_lda, type = "response")$class
+
+confusion_matrix_lda = table(weekly_predict_lda, test$Direction)
+print(confusion_matrix_lda)
+
+accuracy_lda = mean(weekly_predict_lda == test$Direction)
+cat("Accuracy:", round(accuracy_lda, 4), "\n")
+```
+The overall fraction of correct predictions is 62.5%, the sensitivity is 91.8%, and the specificity is 20.93%\. 
+
+**(f)**\. 
+
+```{r 13f, message = FALSE, warning = FALSE}
+weekly_qda = qda(data = training, Direction ~ Lag2)
+weekly_predict_qda = predict(newdata = test, weekly_qda, type = "response")$class
+
+confusion_matrix_qda = table(weekly_predict_qda, test$Direction)
+print(confusion_matrix_qda)
+
+accuracy_qda = mean(weekly_predict_qda == test$Direction)
+cat("Accuracy:", round(accuracy_qda, 4), "\n")
+```
+The overall fraction of correct predictions is 58.65%\. 
+
+**(g)**\. 
+
+```{r 13g, message = FALSE, warning = FALSE}
+xtrain = scale(training[, "Lag2", drop = FALSE])
+xtest = scale(test[, "Lag2", drop = FALSE],
+              center = attr(xtrain, "scaled:center"),
+              scale = attr(xtrain, "scaled:scale"))
+ytrain = training$Direction
+ytest = test$Direction
+
+set.seed(123)
+weekly_knn = knn(train = xtrain, test = xtest, cl = ytrain, k = 1)
+
+confusion_matrix_knn = table(weekly_knn, ytest)
+print(confusion_matrix_knn)
+
+accuracy_knn = mean(weekly_knn == ytest)
+cat("Accuracy:", round(accuracy_knn, 4), "\n")
+```
+The overall fraction of correct predictions is 50.96%\. 
+
+**(h)**\. 
+
+```{r 13h, message = FALSE, warning = FALSE}
+weekly_nb = naiveBayes(data = training, Direction ~ Lag2)
+weekly_predict_nb = predict(newdata = test, weekly_nb, type = "class")
+
+confusion_matrix_nb = table(weekly_predict_nb, test$Direction)
+print(confusion_matrix_nb)
+
+accuracy_nb = mean(weekly_predict_nb == test$Direction)
+cat("Accuracy:", round(accuracy_qda, 4), "\n")
+```
+The overall fraction of correct predictions is 58.65%\. 
+
+**(i)**\. 
+
+LDA and logistic regression perform the best as they have higher accuracy\. 
+
+**(j)**\. 
+
+```{r 13j, message = FALSE, warning = FALSE}
+#Logistic regression
+fit_logit = glm(data = training,Direction ~ Lag1 + Lag2, family = binomial)
+pred_logit = predict(fit_logit, newdata = test, type = "response")
+class_logit = ifelse(pred_logit > 0.5, "Up", "Down")
+table(class_logit, test$Direction)
+mean(class_logit == test$Direction)
+
+fit_logit2 = glm(data = training, Direction ~ Lag2 + poly(Lag2, 2), family = binomial)
+pred_logit2 = predict(fit_logit2, newdata = test, type = "response")
+class_logit2 = ifelse(pred_logit2 > 0.5, "Up", "Down")
+table(class_logit2, test$Direction)
+mean(class_logit2 == test$Direction)
+
+#LDA and QDA
+fit_lda = lda(data = training, Direction ~ Lag1 + Lag2)
+pred_lda = predict(fit_lda, newdata = test)$class
+table(pred_lda, test$Direction)
+mean(pred_lda == test$Direction)
+
+fit_qda = qda(data = training, Direction ~ poly(Lag2, 2))
+pred_qda = predict(fit_qda, newdata = test)$class
+table(pred_qda, test$Direction)
+mean(pred_qda == test$Direction)
+
+#Naive Bayes
+fit_nb = naiveBayes(data = training, Direction ~ Lag1 + Lag2)
+pred_nb = predict(fit_nb, newdata = test)
+table(pred_nb, test$Direction)
+mean(pred_nb == test$Direction)
+
+#KNN
+xtrain2 = scale(training[, c("Lag1","Lag2")])
+xtest2 = scale(test[, c("Lag1","Lag2")],
+                center = attr(xtrain2, "scaled:center"),
+                scale  = attr(xtrain2, "scaled:scale"))
+ytrain2 = training$Direction
+ytest2 = test$Direction
+
+set.seed(123)
+accs = sapply(1:20, function(k) {
+  predk = knn(train = xtrain2, test = xtest2, cl = ytrain2, k = k)
+  mean(predk == ytest2)
+})
+plot(1:20, accs, type="o", xlab="K", ylab="Test Accuracy")
+best_k = which.max(accs)
+best_k
+
+set.seed(123)
+knn_best = knn(xtrain2, xtest2, ytrain2, k = best_k)
+table(knn_best, ytest2)
+mean(knn_best == ytest2)
+```
+Based on all the tests, QAD and logistic regression that includes Lag2 and Lag2 squared perform best as their accuracy is 62.5%.
+
+
+
+

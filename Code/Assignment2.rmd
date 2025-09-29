@@ -103,7 +103,7 @@ From the residuals vs. fitted plot, we can see that observation 69, 377 and 51 h
 **(a)**\. 
 $\hat{\beta_1} = \frac{\sum_{i=1}^n x_i y_i}{\sum_{i=1}^n x_i^2}$
 $\hat{\beta_2} = \frac{\sum_{i=1}^n x_i y_i}{\sum_{i=1}^n x_i^2}$
-Therefore, if we want the two coefficients be the same: ${\sum_{i=1}^n y_i^2} = {\sum_{i=1}^n x_i^2}$
+Therefore, if we want the two coefficients be the same: ${\sum_{i=1}^n y_i^2} = {\sum_{i=1}^n x_i^2}$ or $(\sum_{i=1}^n x_i y_i = 0)$
 
 **(b)**\. 
 
