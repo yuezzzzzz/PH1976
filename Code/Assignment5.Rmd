@@ -2,8 +2,12 @@
 title: "HW5"
 author: "Yue Zhang"
 date: "`r Sys.Date()`"
-output: pdf_document
-editor_options: 
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+editor_options:
   chunk_output_type: console
 ---
 
@@ -293,11 +297,11 @@ coef(best_sub3, min_BIC5)
 coef(best_sub3, max_adjR5)
 
 par(mfrow = c(1,1))
-plot(1:10, summary5$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
+plot(1:p, summary5$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
 abline(v = min_Cp5, lty = 2)
-plot(1:10, summary5$bic, type = "b", xlab = "Model size", ylab = "BIC")
+plot(1:p, summary5$bic, type = "b", xlab = "Model size", ylab = "BIC")
 abline(v = min_BIC5, lty = 2)
-plot(1:10, summary5$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
+plot(1:p, summary5$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
 abline(v = max_adjR5, lty = 2)
 ```
 Based on the Mallow's Cp, the best subset model should be: $crim = 17.4668 + 0.04497zn - 12.4578nox - 0.9425dis + 0.5615rad - 0.3470ptratio + 0.1148lstat - 0.1903medv$. Based on the BIC, $crim = -4.3814 + 0.5228rad + 0.2373lstat$. For the adjusted R-squared, the best subset model is: $crim = 13.1825 + 0.0431zn - 0.0882indus - 10.4682nox + 0.6351rm - 1.0064dis + 0.5610rad - 0.3042ptratio + 0.1404lstat - 0.2201medv$
