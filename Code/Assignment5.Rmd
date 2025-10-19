@@ -1,0 +1,383 @@
+---
+title: "HW5"
+author: "Yue Zhang"
+date: "`r Sys.Date()`"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+#This code chunk will tidy your knit PDF files, wrapping long code lines
+#For it to work, the "formatR" package needs to be installed
+#install.packages('formatR')
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=60), tidy=TRUE)
+
+```
+
+```{r library, results= 'hide'}
+setwd("/Users/yuezhang/Documents/Biostat/PH1976")
+getwd()
+library(ISLR2)
+library(ggplot2)
+library(tidyr)
+library(dtplyr)
+library(tidyverse)
+library(ggcorrplot)
+library(MASS)
+library(class)
+library(glmnet)
+library(leaps)
+library(pls)
+```
+
+*3*\. 
+
+**(a)**\. 
+As s increases from 0, the training RSS will steadily decrease as the model becomes more flexible\. 
+
+**(b)**\. 
+For test RSS, it will decrease initially and then eventually starts increasing in a U shape because if we fit too many independent variables, the model might be overfitting\. 
+
+**(c)**\. 
+The variance will steadily increase as more variables are included, the model becomes complex and sensitive, it will change drastically between different datasets\. 
+
+**(d)**\. 
+The bias will steadily decrease because we include more variable and more noises, the difference between the average prediction of the model and the true value will be smaller\. 
+
+**(e)**\. 
+The irreducible error will remain constant because it is caused by inherent randomness or noise in the data and it is unavoidable\. 
+
+*5*\. 
+
+**(a)**\. 
+$$
+L(\beta_1,\beta_2)=\sum_{i=1}^2\big(y_i-(\beta_1+\beta_2)x_i - {\beta}_0)^2+\lambda(\beta_1^2+\beta_2^2).
+$$
+As $x_{11} = x_{12}$, $x_{21} = x_{22}$, we can say that $x_1 = x_{11} = x_{12}$, $x_2 = x_{21} = x_{22}$. As 
+$x_{11} + x_{21} = 0$, $x_{21} + x_{22} = 0$, $x_1 = -x_2$. Therefore, ${\hat\beta}_0 = 0$\, we need to minimize: 
+$$
+L(\beta_1,\beta_2)=\sum_{i=1}^2\big(y_i-(\beta_1+\beta_2)x_i)^2+\lambda(\beta_1^2+\beta_2^2).
+$$
+
+
+**(b)**\. 
+$$
+\frac{\partial L}{\partial \beta_1}
+= -2\sum_{i=1}^2 x_i\big(y_i-(\beta_1+\beta_2)x_i\big)+2\lambda\beta_1,
+$$
+$$
+\frac{\partial L}{\partial \beta_2}
+= -2\sum_{i=1}^2 x_i\big(y_i-(\beta_1+\beta_2)x_i\big)+2\lambda\beta_2.
+$$
+To minimize these equations, we need to set them as zero
+$$
+{\hat\beta}_1 = {\hat\beta}_2 = 
+\frac{\sum_{i=1}^2 x_i\big(y_i-(\beta_1+\beta_2)x_i\big)}{\lambda}
+$$
+**(c)**\. 
+$$
+L(\beta_1,\beta_2)=\sum_{i=1}^2\big(y_i-(\beta_1+\beta_2)x_i)^2 +\lambda(|\beta_1|+|\beta_2|).
+$$
+**(d)**\. 
+Assumes that there are some ${\alpha}$ value that satisfies ${\beta}_1 + {\beta}_2 = {\alpha}$, $|\beta_1|+|\beta_2| ≥ |alpha|$
+Therefore, 
+$$
+L(\beta_1,\beta_2) ≥ \sum_{i=1}^2\big(y_i-{\alpha}x_i)^2 +\lambda{\alpha}.
+$$
+There are a lot of $({\beta}_1, {\beta}_2)$ pairs that satisfies ${\beta}_1 + {\beta}_2 = {\alpha}$ and ${\beta}_1 {\hat\alpha}$ ≥ 0, ${\beta}_2 {\hat\alpha}$ ≥ 0 will minimize the equation\. 
+
+*8*\. 
+
+**(a)**\. 
+```{r 8a, message = FALSE, warning = FALSE}
+set.seed(1215)
+X = rnorm(100)
+epsilon = rnorm(100)
+```
+
+**(b)**\. 
+```{r 8b, message = FALSE, warning = FALSE}
+Y = 8 + 2 * X + 3 * X^2 + 4 * X^3 + epsilon 
+```
+
+**(c)**\. 
+```{r 8c, message = FALSE, warning = FALSE}
+df = data.frame(X, Y)
+best_sub = regsubsets(data = df, Y ~ poly(X, 10, raw = TRUE), nvmax = 10)
+summary1 = summary(best_sub)
+summary1
+
+min_Cp = which.min(summary1$cp)
+min_BIC = which.min(summary1$bic)
+max_adjR = which.max(summary1$adjr2)
+
+cat(
+  "Min Mallow's CP:", min_Cp, "\n",
+  "Min BIC:", min_BIC, "\n",
+  "Max Adjusted R-squared:", max_adjR, sep = "")
+
+coef(best_sub, min_Cp)
+coef(best_sub, min_BIC)
+coef(best_sub, max_adjR)
+
+par(mfrow = c(1,1))
+plot(1:10, summary1$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
+abline(v = min_Cp, lty = 2)
+plot(1:10, summary1$bic, type = "b", xlab = "Model size", ylab = "BIC")
+abline(v = min_BIC, lty = 2)
+plot(1:10, summary1$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
+abline(v = max_adjR, lty = 2)
+```
+Based on the results, the best model is: $Y = 8.0770 + 1.9653X + 2.9228X^2 + 4.0383X^3$\. 
+
+**(d)**\. 
+#Forward
+```{r 8d, message = FALSE, warning = FALSE}
+forward_sub = regsubsets(data = df, Y ~ poly(X, 10, raw = TRUE), nvmax = 10, method = "forward")
+summary2 = summary(forward_sub)
+summary2
+
+min_Cp2 = which.min(summary2$cp)
+min_BIC2 = which.min(summary2$bic)
+max_adjR2 = which.max(summary2$adjr2)
+
+cat(
+  "Min Mallow's CP:", min_Cp2, "\n",
+  "Min BIC:", min_BIC2, "\n",
+  "Max Adjusted R-squared:", max_adjR2, sep = "")
+
+coef(forward_sub, min_Cp2)
+coef(forward_sub, min_BIC2)
+coef(forward_sub, max_adjR2)
+
+par(mfrow = c(1,1))
+plot(1:10, summary2$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
+abline(v = min_Cp2, lty = 2)
+plot(1:10, summary2$bic, type = "b", xlab = "Model size", ylab = "BIC")
+abline(v = min_BIC2, lty = 2)
+plot(1:10, summary2$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
+abline(v = max_adjR2, lty = 2)
+```
+The best forward subset model is: $Y = 8.0770 + 1.9653X + 2.9228X^2 + 4.0383X^3$ which is the same as part c\. 
+
+#Backward
+```{r 8d2, message = FALSE, warning = FALSE}
+backward_sub = regsubsets(data = df, Y ~ poly(X, 10, raw = TRUE), nvmax = 10, method = "backward")
+summary3 = summary(backward_sub)
+summary3
+
+min_Cp3 = which.min(summary3$cp)
+min_BIC3 = which.min(summary3$bic)
+max_adjR3 = which.max(summary3$adjr2)
+
+cat(
+  "Min Mallow's CP:", min_Cp3, "\n",
+  "Min BIC:", min_BIC3, "\n",
+  "Max Adjusted R-squared:", max_adjR3, sep = "")
+
+coef(backward_sub, min_Cp3)
+coef(backward_sub, min_BIC3)
+coef(backward_sub, max_adjR3)
+
+par(mfrow = c(1,1))
+plot(1:10, summary3$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
+abline(v = min_Cp3, lty = 2)
+plot(1:10, summary3$bic, type = "b", xlab = "Model size", ylab = "BIC")
+abline(v = min_BIC3, lty = 2)
+plot(1:10, summary3$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
+abline(v = max_adjR3, lty = 2)
+```
+The best backward subset model is: $Y = 8.0770 + 1.9653X + 2.9228X^2 + 4.0383X^3$ which is the same as part c\. 
+
+**(e)**\. 
+```{r 8e, message = FALSE, warning = FALSE}
+lasso = cv.glmnet(poly(df$X, 10, raw = TRUE), df$Y, alpha = 1, nfolds = 10, standardize = TRUE)
+best_lambda = lasso$lambda.min
+best_lambda
+
+plot(lasso)
+
+coef_min = coef(lasso, s = "lambda.min")
+coef_min
+```
+The best backward subset model is: $Y = 8.1718 + 1.8161X + 2.8521X^2 + 4.0529X^3$ which is slightly different as part c\. 
+
+**(f)**\. 
+#Best Subset
+```{r 8f, message = FALSE, warning = FALSE}
+Y2 = 8 + 7 * X^7 + epsilon
+df2 = data.frame(X, Y2)
+
+best_sub2 = regsubsets(data = df2, Y2 ~ poly(X, 10, raw = TRUE), nvmax = 10)
+summary4 = summary(best_sub2)
+summary4
+
+min_Cp4 = which.min(summary4$cp)
+min_BIC4 = which.min(summary4$bic)
+max_adjR4 = which.max(summary4$adjr2)
+
+cat(
+  "Min Mallow's CP:", min_Cp4, "\n",
+  "Min BIC:", min_BIC4, "\n",
+  "Max Adjusted R-squared:", max_adjR4, sep = "")
+
+coef(best_sub2, min_Cp4)
+coef(best_sub2, min_BIC4)
+coef(best_sub2, max_adjR4)
+
+par(mfrow = c(1,1))
+plot(1:10, summary4$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
+abline(v = min_Cp4, lty = 2)
+plot(1:10, summary4$bic, type = "b", xlab = "Model size", ylab = "BIC")
+abline(v = min_BIC4, lty = 2)
+plot(1:10, summary4$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
+abline(v = max_adjR4, lty = 2)
+```
+Based on the Mallow's Cp and BIC, the best subset model should be: $Y = 8.0092 + 7.0001X^7$, if based on the adjusted R-squared, the best subset model is: $Y = 8.0315 + 7.0013X^7 - 0.0005X^8$
+
+#Lasso
+```{r 8f2, message = FALSE, warning = FALSE}
+lasso2 = cv.glmnet(poly(df2$X, 10, raw = TRUE), df2$Y2, alpha = 1, nfolds = 10, standardize = TRUE)
+best_lambda2 = lasso2$lambda.min
+best_lambda2
+
+plot(lasso2)
+
+coef_min2 = coef(lasso2, s = "lambda.min")
+coef_min2
+```
+The best Lasso model is: $Y = 19.2461 + 0.2324X^5 + 6.7638X^7$\. 
+
+*11*\. 
+
+**(a)**\. 
+```{r 11a, message = FALSE, warning = FALSE}
+boston = ISLR2::Boston
+head(boston)
+
+#We will use 10-fold CV RMSE to evaluate the models
+y = boston$crim
+X_mm = model.matrix(data = boston, crim ~ .)[, -1]
+p = ncol(X_mm)
+
+pred_regsubsets = function(object, newdata, id){
+  form = as.formula(paste("crim ~", paste(names(coef(object, id))[-1], collapse = "+")))
+  mm = model.matrix(form, newdata)
+  drop(mm %*% coef(object, id))
+}
+
+rmse = function(y, yhat) sqrt(mean((y - yhat)^2))
+
+K = 10
+fold = sample(rep(1:K, length.out = nrow(boston)))
+```
+
+#Best subsets
+```{r 11abs, message = FALSE, warning = FALSE}
+best_sub3 = regsubsets(data = boston, crim ~ ., nvmax = p)
+summary5 = summary(best_sub3)
+summary5
+
+min_Cp5 = which.min(summary5$cp)
+min_BIC5 = which.min(summary5$bic)
+max_adjR5 = which.max(summary5$adjr2)
+
+cat(
+  "Min Mallow's CP:", min_Cp5, "\n",
+  "Min BIC:", min_BIC5, "\n",
+  "Max Adjusted R-squared:", max_adjR5, sep = "")
+
+coef(best_sub3, min_Cp5)
+coef(best_sub3, min_BIC5)
+coef(best_sub3, max_adjR5)
+
+par(mfrow = c(1,1))
+plot(1:10, summary5$cp, type = "b", xlab = "Model size", ylab = "Mallow's Cp")
+abline(v = min_Cp5, lty = 2)
+plot(1:10, summary5$bic, type = "b", xlab = "Model size", ylab = "BIC")
+abline(v = min_BIC5, lty = 2)
+plot(1:10, summary5$adjr2, type = "b", xlab = "Model size", ylab = "Adjusted R-squared")
+abline(v = max_adjR5, lty = 2)
+```
+Based on the Mallow's Cp, the best subset model should be: $crim = 17.4668 + 0.04497zn - 12.4578nox - 0.9425dis + 0.5615rad - 0.3470ptratio + 0.1148lstat - 0.1903medv$. Based on the BIC, $crim = -4.3814 + 0.5228rad + 0.2373lstat$. For the adjusted R-squared, the best subset model is: $crim = 13.1825 + 0.0431zn - 0.0882indus - 10.4682nox + 0.6351rm - 1.0064dis + 0.5610rad - 0.3042ptratio + 0.1404lstat - 0.2201medv$
+
+#Lasso
+```{r 11alasso, message = FALSE, warning = FALSE}
+cv_lasso = cv.glmnet(X_mm, y, alpha = 1, nfolds = 10)
+plot(cv_lasso)
+coef(cv_lasso, s = "lambda.min")
+```
+Based on the best $\lambda$, the best subset model should be: $crim = 10.9830 + 0.0400zn - 0.0662indus - 0.7160chas - 8.0426nox + 0.4947rm - 0.8790dis + 0.5592rad - 0.0009tax - 0.2541ptratio + 0.1364lstat - 0.1937medv$\. 
+
+#Ridge
+```{r 11aridge, message = FALSE, warning = FALSE}
+cv_ridge = cv.glmnet(X_mm, y, alpha = 0, nfolds = 10)
+plot(cv_ridge)
+coef(cv_ridge, s = "lambda.min")
+```
+The best ridge model is:$crim=5.2223+0.0338zn−0.0777indus−0.8255chas−4.9053nox+0.5166rm+0.0000954age−0.7217dis+0.4434rad+0.00374tax−0.1642ptratio+0.1564lstat−0.1584medv$\. 
+
+**(b)**\. 
+```{r 11b, message = FALSE, warning = FALSE}
+#Best subsets
+cv_bs = matrix(NA_real_, K, p)
+for(k in 1:K){
+  fit = regsubsets(crim ~ ., data = boston[fold != k, ], nvmax = p)
+  for(m in 1:p){
+    yhat = pred_regsubsets(fit, boston[fold == k, ], id = m)
+    cv_bs[k, m] = sqrt(mean( (boston$crim[fold == k] - yhat)^2 ))
+  }
+}
+rmse_bs = colMeans(cv_bs)
+size_bs = which.min(rmse_bs)
+rmse_bs_min = min(rmse_bs)
+coef_bs = coef(regsubsets(crim ~ ., data = boston, nvmax = p), size_bs)
+coef_bs
+
+#Lasso
+rmse_lasso = numeric(K)
+lambda_lass = numeric(K)
+
+for(k in 1:K){
+  tr = fold != k; te = !tr
+  fit_cv = cv.glmnet(X_mm[tr, ], y[tr], alpha = 1)        
+  lambda_lass[k] = fit_cv$lambda.min
+  pred = as.numeric(predict(fit_cv, newx = X_mm[te, ], s = "lambda.min"))
+  rmse_lasso[k] = rmse(y[te], pred)
+}
+
+rmse_lasso_mean = mean(rmse_lasso)
+
+lasso_full = cv.glmnet(X_mm, y, alpha = 1)
+coef_lasso = coef(lasso_full, s = "lambda.min")
+coef_lasso
+
+#Ridge
+rmse_ridge = numeric(K)
+lambda_rid = numeric(K)
+
+for(k in 1:K){
+  tr = fold != k; te <- !tr
+  fit_cv = cv.glmnet(X_mm[tr, ], y[tr], alpha = 0)
+  lambda_rid[k] = fit_cv$lambda.min
+  pred = as.numeric(predict(fit_cv, newx = X_mm[te, ], s = "lambda.min"))
+  rmse_ridge[k] = rmse(y[te], pred)
+}
+
+rmse_ridge_mean = mean(rmse_ridge)
+ridge_full = cv.glmnet(X_mm, y, alpha = 0)
+coef_ridge = coef(ridge_full, s = "lambda.min")
+coef_ridge
+
+c(
+  RMSE_best_subset = rmse_bs_min, 
+  RMSE_lasso       = rmse_lasso_mean,
+  RMSE_ridge       = rmse_ridge_mean
+)
+```
+Based on the result, we will choose Ridge as the best model as it has the least RMSE. The best model is: 
+$crim =5.2223+0.0338zn−0.0777indus−0.8255chas−4.9053nox+0.5166rm+0.0000954age−0.7217dis+0.4434rad+0.00374tax−0.1642ptratio+0.1564lstat−0.1584medv$\. 
+
+**(c)**\. 
+The ridge model features all the variables. Ridge will shrinks coefficients toward 0 but does not set them exactly to 0. 
